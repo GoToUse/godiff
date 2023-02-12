@@ -1,45 +1,46 @@
+//	File/Directory diff tool with HTML output
+//	Copyright (C) 2012   Siu Pin Chao
 //
-//  File/Directory diff tool with HTML output
-//  Copyright (C) 2012   Siu Pin Chao
+//	This program is free software: you can redistribute it and/or modify
+//	it under the terms of the GNU General Public License as published by
+//	the Free Software Foundation, either version 3 of the License, or
+//	(at your option) any later version.
 //
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//	GNU General Public License for more details.
 //
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//	You should have received a copy of the GNU General Public License
+//	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Description:
-//  This program can be use to compare files and directories for differences.
-//  When comparing directories, it iterates through all files in both directories
-//  and compare files having the same name.
 //
-//  It uses the algorithm from "An O(ND) Difference Algorithm and its Variations"
-//  by Eugene Myers Algorithmica Vol. 1 No. 2, 1986, p 251.
+//	This program can be use to compare files and directories for differences.
+//	When comparing directories, it iterates through all files in both directories
+//	and compare files having the same name.
+//
+//	It uses the algorithm from "An O(ND) Difference Algorithm and its Variations"
+//	by Eugene Myers Algorithmica Vol. 1 No. 2, 1986, p 251.
 //
 // Main Features:
-//  * Supports UTF8 file.
-//  * Show differences within a line
-//  * Options for ignore case, white spaces compare, blank lines etc.
+//   - Supports UTF8 file.
+//   - Show differences within a line
+//   - Options for ignore case, white spaces compare, blank lines etc.
 //
 // Main aim of the application is to try out the features in the go programming language. (golang.org)
-//  * Slices: Used extensively, and re-slicing too whenever it make sense.
-//  * File I/O: Use Mmap for reading text files
-//  * Function Closure: Use in callbacks functions to handle both file and line compare
-//  * Goroutines: for running multiple file compares concurrently, using channels and mutex too.
 //
+//   - Slices: Used extensively, and re-slicing too whenever it make sense.
 //
-//  History
-//  -------
-//  2012/09/20  Created
+//   - File I/O: Use Mmap for reading text files
 //
+//   - Function Closure: Use in callbacks functions to handle both file and line compare
 //
+//   - Goroutines: for running multiple file compares concurrently, using channels and mutex too.
+//
+//     History
+//     -------
+//     2012/09/20  Created
 package main
 
 import (
@@ -51,7 +52,9 @@ import (
 	"fmt"
 	"hash/crc32"
 	"html"
-	"io/ioutil"
+
+	// io/ioutil will be deprecated since go1.19
+	"io"
 	"os"
 	"regexp"
 	"runtime"
@@ -269,6 +272,7 @@ func usage(msg string) {
 	}
 	fmt.Fprint(os.Stderr, "A text file comparison tool displaying differenes in HTML\n\n")
 	fmt.Fprint(os.Stderr, "usage: godiff <options> <file|dir> <file|dir>\n")
+	fmt.Fprint(os.Stderr, "\n<options>\n")
 	flag.PrintDefaults()
 	os.Exit(2)
 }
@@ -398,9 +402,7 @@ func main() {
 	}
 }
 
-//
 // Call the diff algorithm.
-//
 func do_diff(data1, data2 []int) ([]bool, []bool) {
 	len1, len2 := len(data1), len(data2)
 	change1, change2 := make([]bool, len1), make([]bool, len2)
@@ -414,9 +416,7 @@ func do_diff(data1, data2 []int) ([]bool, []bool) {
 	return change1, change2
 }
 
-//
 // Find the begin/end of this 'changed' segment
-//
 func next_change_segment(start int, change []bool, data []int) (int, int, int) {
 
 	// find the end of this changes segment
@@ -437,9 +437,7 @@ func next_change_segment(start int, change []bool, data []int) (int, int, int) {
 	return end, i, j
 }
 
-//
 // Add segment to the group of changes. Add context lines before and after if necessary
-//
 func add_change_segment(chg DiffChanger, ops []DiffOp, op DiffOp) []DiffOp {
 	last1, last2 := 0, 0
 	if len(ops) > 0 {
@@ -468,10 +466,8 @@ func add_change_segment(chg DiffChanger, ops []DiffOp, op DiffOp) []DiffOp {
 	return ops
 }
 
-//
 // Report diff changes.
 // For each group of change, call the diff_lines() function
-//
 func report_diff(chg DiffChanger, data1, data2 []int, change1, change2 []bool) bool {
 	len1, len2 := len(change1), len(change2)
 	i1, i2 := 0, 0
@@ -538,9 +534,7 @@ func to_lower_byte(b byte) byte {
 	return b
 }
 
-//
 // split text into array of individual rune position, and another array for comparison.
-//
 func split_runes(s []byte) ([]int, []int) {
 
 	pos := make([]int, len(s)+1)
@@ -578,10 +572,8 @@ func split_runes(s []byte) ([]int, []int) {
 	return pos[:n+1], cmp[:n]
 }
 
-//
 // Write bytes to buffer, ready to be output as html,
 // replace special chars with html-entities
-//
 func write_html_bytes(buf *bytes.Buffer, line []byte) {
 	var esc string
 	lasti := 0
@@ -651,7 +643,7 @@ func output_diff_message_content(filename1, filename2 string, info1, info2 os.Fi
 			outfmt.buf1.WriteString(span)
 			write_html_bytes(&outfmt.buf1, []byte(msg1))
 			outfmt.buf1.WriteString("</span><br>")
-		} else if data1 != nil && len(data1) > 0 {
+		} else if len(data1) > 0 {
 			html_preview_file(&outfmt.buf1, data1)
 		}
 
@@ -659,7 +651,7 @@ func output_diff_message_content(filename1, filename2 string, info1, info2 os.Fi
 			outfmt.buf2.WriteString(span)
 			write_html_bytes(&outfmt.buf2, []byte(msg2))
 			outfmt.buf2.WriteString("</span><br>")
-		} else if data2 != nil && len(data2) > 0 {
+		} else if len(data2) > 0 {
 			html_preview_file(&outfmt.buf2, data2)
 		}
 
@@ -1025,9 +1017,7 @@ func (chg *DiffChangerText) diff_lines(ops []DiffOp) {
 	}
 }
 
-//
 // Test for space character
-//
 func is_space(b byte) bool {
 	return b == ' ' || b == '\t' || b == '\v' || b == '\f'
 }
@@ -1043,18 +1033,14 @@ func skip_space_rune(line []byte, i int) int {
 	return i
 }
 
-//
 // Get the next rune, and skip spaces after it
-//
 func get_next_rune_nonspace(line []byte, i int) (rune, int) {
 	b, size := utf8.DecodeRune(line[i:])
 	return b, skip_space_rune(line, i+size)
 }
 
-//
 // Get the next rune, and determine if there is a space after it.
 // Also ignore trailing spaces at end-of-line
-//
 func get_next_rune_xspace(line []byte, i int) (rune, bool, int) {
 	b, size := utf8.DecodeRune(line[i:])
 	i += size
@@ -1352,9 +1338,7 @@ type LinesData struct {
 	zids_end   int
 }
 
-//
 // Compute id's that represent the original lines, these numeric id's are use for faster line comparison.
-//
 func find_equiv_lines(lines1, lines2 [][]byte) (*LinesData, *LinesData) {
 
 	info1 := LinesData{
@@ -1581,10 +1565,8 @@ func compress_equiv_ids(lines1, lines2 *LinesData, max_id1, max_id2 int) {
 	}
 }
 
-//
 // Do the reverse of the compress_equiv_ids.
 // zllines1 and zlines2 contains the 'extra' lines each entry represents.
-//
 func expand_change_list(info1, info2 *LinesData, zchange1, zchange2 []bool) {
 
 	for findex := 0; findex < 2; findex++ {
@@ -1654,7 +1636,7 @@ func open_file(fname string, finfo os.FileInfo) *Filedata {
 			file.errormsg = err.Error()
 			return file
 		}
-		fdata, err := ioutil.ReadAll(reader)
+		fdata, err := io.ReadAll(reader)
 		if err != nil {
 			file.errormsg = err.Error()
 			return file
@@ -1666,7 +1648,7 @@ func open_file(fname string, finfo os.FileInfo) *Filedata {
 	} else if strings.HasSuffix(fname, ".bz2") {
 		// Uncompress .bz2 file
 		reader := bzip2.NewReader(file.osfile)
-		fdata, err := ioutil.ReadAll(reader)
+		fdata, err := io.ReadAll(reader)
 		if err != nil {
 			file.errormsg = err.Error()
 			return file
@@ -1686,7 +1668,7 @@ func open_file(fname string, finfo os.FileInfo) *Filedata {
 		file.is_mapped = true
 	} else {
 		// read in the entire file
-		fdata := make([]byte, fsize, fsize)
+		fdata := make([]byte, fsize)
 		n, err := file.osfile.Read(fdata)
 		if err != nil {
 			file.errormsg = err.Error()
@@ -1730,9 +1712,7 @@ func (file *Filedata) check_binary() {
 	}
 }
 
-//
 // split up data into text lines
-//
 func (file *Filedata) split_lines() [][]byte {
 
 	lines := make([][]byte, 0, min_int(len(file.data)/32, 500))
@@ -1757,7 +1737,7 @@ func (file *Filedata) split_lines() [][]byte {
 
 	// add last incomplete line (if required)
 	if len(data) > previ {
-		lines = append(lines, data[previ:len(data)])
+		lines = append(lines, data[previ:])
 	}
 
 	return lines
@@ -2023,9 +2003,7 @@ func min_int(a, b int) int {
 	return b
 }
 
-//
 // An O(ND) Difference Algorithm: Find middle snake
-//
 func algorithm_sms(data1, data2 []int, v []int) (int, int, int, int) {
 
 	end1, end2 := len(data1), len(data2)
@@ -2078,9 +2056,7 @@ func algorithm_sms(data1, data2 []int, v []int) (int, int, int, int) {
 	return 0, 0, 0, 0 // should not reach here
 }
 
-//
 // Special case for algorithm_sms() with only 1 item.
-//
 func find_one_sms(value int, list []int) (int, int) {
 	for i, v := range list {
 		if v == value {
@@ -2090,9 +2066,7 @@ func find_one_sms(value int, list []int) (int, int) {
 	return 1, 0
 }
 
-//
 // An O(ND) Difference Algorithm: Find LCS
-//
 func algorithm_lcs(data1, data2 []int, change1, change2 []bool, v []int) {
 
 	start1, start2 := 0, 0
@@ -2215,9 +2189,7 @@ func rune_bouundary_score(r1, r2 int) int {
 	return s1 + s2
 }
 
-//
 // shift changes up or down to make it more readable.
-//
 func shift_boundaries(data []int, change []bool, boundary_score func(int, int) int) {
 
 	start, clen := 0, len(change)

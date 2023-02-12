@@ -1,4 +1,6 @@
-//
+//go:build linux || freebsd || darwin
+// +build linux freebsd darwin
+
 //  File/Directory diff tool with HTML output
 //  Copyright (C) 2012   Siu Pin Chao
 //
@@ -15,8 +17,6 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-
-// +build linux freebsd darwin
 
 package main
 
