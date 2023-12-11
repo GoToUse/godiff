@@ -27,8 +27,8 @@ import (
 
 const has_mmap = true
 
-var win_mapper_mutex sync.Mutex
-var win_mapper_handle = make(map[uintptr]syscall.Handle)
+var winMapperMutex sync.Mutex
+var winMapperHandle = make(map[uintptr]syscall.Handle)
 
 // Implement mmap for windows
 func map_file(file *os.File, offset, size int) ([]byte, error) {
@@ -46,9 +46,9 @@ func map_file(file *os.File, offset, size int) ([]byte, error) {
 	}
 
 	// store the mapping handle
-	win_mapper_mutex.Lock()
-	win_mapper_handle[addr] = h
-	win_mapper_mutex.Unlock()
+	winMapperMutex.Lock()
+	winMapperHandle[addr] = h
+	winMapperMutex.Unlock()
 
 	// Slice memory layout
 	sl := reflect.SliceHeader{Data: addr, Len: size, Cap: size}
@@ -59,17 +59,17 @@ func map_file(file *os.File, offset, size int) ([]byte, error) {
 	return bp, err
 }
 
-// Implement munmap for windows
+// Implement unmap_file for windows
 func unmap_file(data []byte) error {
 
 	// Use unsafe to get the buffer address
 	addr := uintptr(unsafe.Pointer(&data[0]))
 
 	// retrieve the mapping handle
-	win_mapper_mutex.Lock()
-	h := win_mapper_handle[addr]
-	delete(win_mapper_handle, addr)
-	win_mapper_mutex.Unlock()
+	winMapperMutex.Lock()
+	h := winMapperHandle[addr]
+	delete(winMapperHandle, addr)
+	winMapperMutex.Unlock()
 
 	// unmap file view
 	err := syscall.UnmapViewOfFile(addr)

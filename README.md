@@ -10,8 +10,9 @@ See example output [here:](http://raw.githack.com/spcau/godiff/master/example.ht
 
 ## How to use godiff
 
- godiff file1 file2 > results.html
- godiff directory1 directory > results.html
+ `godiff file1 file2 > results.html`
+
+ `godiff directory1 directory > results.html`
 
 See `godiff -h` for all the available command line options
 
